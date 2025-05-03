@@ -1,0 +1,65 @@
+package com.booking.system.service.impl;
+
+import com.booking.system.dto.ClassScheduleResponse;
+import com.booking.system.entity.model.Country;
+import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.response.ListResponse;
+import com.booking.system.entity.response.ResponseFormat;
+import com.booking.system.exception.SystemException;
+import com.booking.system.repository.ClassScheduleRepository;
+import com.booking.system.repository.CountryRepository;
+import com.booking.system.repository.UserRepository;
+import com.booking.system.service.ClassScheduleService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ClassScheduleServiceImpl implements ClassScheduleService{
+    private final UserRepository userRepository;
+    private final CountryRepository countryRepository;
+    private final ClassScheduleRepository classScheduleRepository;
+
+    @Override
+    public ResponseFormat getClassSchedule(String username,int first, int max) {
+        ResponseFormat responseFormat = null;
+        ListResponse response =ListResponse.builder()
+                .items(new ArrayList<>())
+                .totalRecords(0)
+                .build();
+        try {
+            OAuthUser user = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new SystemException("User not found"));
+
+            Country country = countryRepository.findById(user.getCountry().getId())
+                    .orElseThrow(() -> new SystemException("Country not found"));
+
+            Pageable pageable= PageRequest.of(first,max);
+
+
+            List<ClassScheduleResponse> classScheduleList = classScheduleRepository.findClassScheduleByCountry(country, pageable);
+            long total=classScheduleRepository.countClassScheduleByCountry(country);
+
+            response.setItems(classScheduleList);
+            response.setTotalRecords(total);
+            responseFormat = new ResponseFormat();
+            responseFormat.setSuccess(true);
+            responseFormat.setMessage(Optional.of("Fetching Class Schedule List Related By Country Successful"));
+            responseFormat.setData(Optional.of(response));
+
+        } catch (Exception e) {
+            log.error("Error occurred while fetching Class Schedule List info: {}", e.getMessage(), e);
+            throw new SystemException(e);
+        }
+        return responseFormat;
+    }
+
+}
