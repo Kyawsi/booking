@@ -4,11 +4,13 @@ import com.booking.system.dto.UserPackageHistoryProjection;
 import com.booking.system.entity.model.OAuthUser;
 import com.booking.system.entity.model.PackageModule;
 import com.booking.system.entity.model.UserPackage;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -17,6 +19,7 @@ public interface UserPackageRepository extends CrudRepository<UserPackage,Long> 
     Optional<UserPackage> findByUserAndPackageModule(OAuthUser user, PackageModule packageModule);
 
     @Query(value = "SELECT " +
+            "up.id as ownPackageId, " +
             "up.remaining_credits AS remainingCredits, " +
             "u.name AS name, " +
             "p.name AS packageName, " +
@@ -28,10 +31,19 @@ public interface UserPackageRepository extends CrudRepository<UserPackage,Long> 
             "FROM user_package up " +
             "JOIN package p ON p.id = up.package_id " +
             "JOIN oauth_user u ON u.id = up.user_id " +
+            "WHERE u.id = :userId " +
+            "ORDER BY up.id desc ",
+            nativeQuery = true)
+    List<UserPackageHistoryProjection> findPurchasedPackageHistoryNative(
+            @Param("userId") Long userId,
+            Pageable pageable);
+
+
+    @Query(value = "SELECT COUNT(*) FROM user_package up " +
+            "JOIN package p ON p.id = up.package_id " +
+            "JOIN oauth_user u ON u.id = up.user_id " +
             "WHERE u.id = :userId",
             nativeQuery = true)
-    Optional<UserPackageHistoryProjection> findPurchasedPackageHistoryNative(@Param("userId") Long userId);
-
-
+    long countPurchasedPackageHistory(@Param("userId") Long userId);
 
 }

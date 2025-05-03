@@ -1,5 +1,6 @@
 package com.booking.system.entity.request;
 
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,15 +10,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PersonCreateUpdateRequest {
+public class PackageRequest {
 
-    private String email;
-
-    private String password;
-
-    private String username;
-
+    private String name;
     private String countryGuid;
-    private boolean selfRegister;
+    private Double price;
+    private Integer creditAmount;
+    private Integer expirationDays;
 
 }

@@ -8,5 +8,5 @@ public interface UserPackageService {
     @Transactional(rollbackFor = Exception.class)
     ResponseFormat purchasedPackage(UserPackageRequest request, String username);
 
-    ResponseFormat findPurchasedPackageHistory(String username);
+    ResponseFormat findPurchasedPackageHistory(String username, int first, int max);
 }

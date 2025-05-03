@@ -9,6 +9,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,5 +35,7 @@ public interface ClassScheduleRepository extends CrudRepository<ClassSchedule,Lo
 
     @Query("SELECT COUNT(cs) FROM ClassSchedule cs WHERE cs.country = :country")
     long countClassScheduleByCountry(@Param("country") Country country);
+
+    List<ClassSchedule> findByEndTimeBefore(ZonedDateTime now);
 
 }

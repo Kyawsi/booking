@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 
 public interface UserPackageHistoryProjection {
+    Long getOwnPackageId();
     Integer getRemainingCredits();
     String getName();
     String getPackageName();

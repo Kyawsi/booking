@@ -25,9 +25,11 @@ public class UserPackageController {
 
     @GetMapping(value = "/history")
     public ResponseEntity<ResponseFormat> findPurchasedPackageHistory(
-
-                                                 Principal principal) {
-        ResponseFormat response = userPackageService.findPurchasedPackageHistory(principal.getName());
+            @RequestParam(value = "first", required = false, defaultValue="0") int first,
+            @RequestParam(value = "max", required = false, defaultValue= "10000" ) int max,
+            Principal principal) {
+        ResponseFormat response = userPackageService.findPurchasedPackageHistory(principal.getName(),
+                first,max);
         return ResponseEntity.ok(response);
     }
 

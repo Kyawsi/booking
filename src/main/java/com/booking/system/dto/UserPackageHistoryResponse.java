@@ -14,6 +14,7 @@ import java.time.ZonedDateTime;
 @AllArgsConstructor
 public class UserPackageHistoryResponse {
 
+    private Long ownPackageId;
     private String name;
     private String packageName;
     private Double price;

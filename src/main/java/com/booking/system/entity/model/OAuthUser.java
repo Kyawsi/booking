@@ -26,6 +26,9 @@ public class OAuthUser {
     @Column(name = "name")
     private String name;
 
+    @Column(name="username")
+    private String username;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "country", nullable = false)
     private Country country;

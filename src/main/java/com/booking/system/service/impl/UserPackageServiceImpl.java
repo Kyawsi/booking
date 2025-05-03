@@ -6,6 +6,7 @@ import com.booking.system.entity.model.OAuthUser;
 import com.booking.system.entity.model.PackageModule;
 import com.booking.system.entity.model.UserPackage;
 import com.booking.system.entity.request.UserPackageRequest;
+import com.booking.system.entity.response.ListResponse;
 import com.booking.system.entity.response.ResponseFormat;
 import com.booking.system.exception.SystemException;
 import com.booking.system.repository.PackageModuleRepository;
@@ -15,23 +16,32 @@ import com.booking.system.service.UserPackageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class UserPackageServiceImpl implements UserPackageService {
-    private final UserPackageRepository userPackageRepository;
-    private final UserRepository userRepository;
-    private final PackageModuleRepository packageModuleRepository;
+
+    @Autowired
+    private  UserPackageRepository userPackageRepository;
+    @Autowired
+    private  UserRepository userRepository;
+    @Autowired
+    private  PackageModuleRepository packageModuleRepository;
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -85,34 +95,47 @@ public class UserPackageServiceImpl implements UserPackageService {
     }
 
     @Override
-    public ResponseFormat findPurchasedPackageHistory(String username) {
+    public ResponseFormat findPurchasedPackageHistory(String username, int first, int max) {
         ResponseFormat responseFormat = null;
-
+        ListResponse response =ListResponse.builder()
+                .items(new ArrayList<>())
+                .totalRecords(0)
+                .build();
         try {
+            Pageable pageable = PageRequest.of(first, max);
+
             OAuthUser user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new SystemException("User not found"));
 
-            UserPackageHistoryProjection projection = userPackageRepository
-                    .findPurchasedPackageHistoryNative(user.getId())
-                    .orElseThrow(() -> new SystemException("Purchased history data not found"));
+            long total= userPackageRepository.countPurchasedPackageHistory(user.getId());
+            List<UserPackageHistoryProjection> projections = userPackageRepository
+                    .findPurchasedPackageHistoryNative(user.getId(), pageable);
 
-            ZonedDateTime createdOn = projection.getCreatedOn().atZone(ZoneId.systemDefault());
-            ZonedDateTime updatedOn = projection.getUpdatedOn().atZone(ZoneId.systemDefault());
-            ZonedDateTime expiryDate = createdOn.plusDays(projection.getExpirationDays());
-            String status = ZonedDateTime.now().isAfter(expiryDate) ? "EXPIRED" : "AVAILABLE";
 
-            UserPackageHistoryResponse response = UserPackageHistoryResponse.builder()
-                    .name(projection.getName())
-                    .packageName(projection.getPackageName())
-                    .price(projection.getPrice())
-                    .creditAmount(projection.getCreditAmount())
-                    .remainingCredits(projection.getRemainingCredits())
-                    .expirationDays(projection.getExpirationDays())
-                    .createdOn(createdOn)
-                    .updatedOn(updatedOn)
-                    .status(status)
-                    .build();
+            List<UserPackageHistoryResponse> responseList = projections.stream()
+                    .map(projection -> {
+                        ZonedDateTime createdOn = projection.getCreatedOn().atZone(ZoneId.systemDefault());
+                        ZonedDateTime updatedOn = projection.getUpdatedOn().atZone(ZoneId.systemDefault());
+                        ZonedDateTime expiryDate = createdOn.plusDays(projection.getExpirationDays());
+                        String status = ZonedDateTime.now().isAfter(expiryDate) ? "EXPIRED" : "AVAILABLE";
 
+                        return UserPackageHistoryResponse.builder()
+                                .ownPackageId(projection.getOwnPackageId())
+                                .name(projection.getName())
+                                .packageName(projection.getPackageName())
+                                .price(projection.getPrice())
+                                .creditAmount(projection.getCreditAmount())
+                                .remainingCredits(projection.getRemainingCredits())
+                                .expirationDays(projection.getExpirationDays())
+                                .createdOn(createdOn)
+                                .updatedOn(updatedOn)
+                                .status(status)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+
+            response.setTotalRecords(total);
+            response.setItems(responseList);
             responseFormat = new ResponseFormat();
             responseFormat.setSuccess(true);
             responseFormat.setMessage(Optional.of("User purchased package history fetched successfully"));
@@ -122,8 +145,10 @@ public class UserPackageServiceImpl implements UserPackageService {
             log.error("Error occurred while fetching user purchased package history: {}", e.getMessage(), e);
             throw new SystemException(e);
         }
+
         return responseFormat;
     }
+
 
 
 

@@ -21,6 +21,7 @@ public class ResponseFormat {
     private Optional<ZonedDateTime> timestamp;
     @Getter @Setter @JsonProperty("error") private Optional<String> error;
 
+
     @Builder(builderMethodName = "successResponse")
     public static ResponseFormat createSuccessResponse(Object object, String message) {
         ResponseFormat response = new ResponseFormat();

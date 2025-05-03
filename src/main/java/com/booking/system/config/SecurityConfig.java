@@ -34,6 +34,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/api/auth/**",
                         "/v1/user/create",  // Add this to match your actual request path
                         "/v1/user/login",
+                        "/v1/user/verify-email",
+                        "/v1/country/list",
+                        "/v1/class/create",
+                        "/v1/package/create",
+                        "/v1/user/request-password-reset",
                         "/swagger-resources",
                         "/swagger-resources/**",
                         "/v3/api-docs/**",

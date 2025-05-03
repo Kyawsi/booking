@@ -3,6 +3,7 @@ package com.booking.system.service.impl;
 import com.booking.system.dto.LoginProfileResponse;
 import com.booking.system.entity.model.Country;
 import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.request.ChangePasswordRequest;
 import com.booking.system.entity.request.PersonCreateUpdateRequest;
 import com.booking.system.entity.response.ResponseFormat;
 import com.booking.system.exception.SystemException;
@@ -45,7 +46,7 @@ public class UserServiceImpl implements UserService {
             Country country = countryRepository.findByGuid(request.getCountryGuid())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid country ID"));
 
-            boolean isVerified = !(Boolean.TRUE.equals(request.getSelfRegister()));
+            boolean isVerified = !(Boolean.TRUE.equals(request.isSelfRegister()));
 
             OAuthUser user = OAuthUser.builder()
                     .email(request.getEmail())
@@ -55,6 +56,7 @@ public class UserServiceImpl implements UserService {
                     .isVerified(isVerified)
                     .createdOn(ZonedDateTime.now())
                     .updatedOn(ZonedDateTime.now())
+                    .username(request.getEmail())
                     .build();
 
             userRepository.save(user);
@@ -106,6 +108,31 @@ public class UserServiceImpl implements UserService {
         return responseFormat;
     }
 
+    @Override
+    public ResponseFormat changePassword(ChangePasswordRequest request,String username) {
+        ResponseFormat responseFormat = new ResponseFormat();
+
+        try {
+            OAuthUser user = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
+
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            user.setUpdatedOn(ZonedDateTime.now());
+            userRepository.save(user);
+
+            responseFormat.setSuccess(true);
+            responseFormat.setMessage(Optional.of("Password changed successfully"));
+            responseFormat.setData(Optional.of(Map.of("userId", user.getId())));
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error changing password: {}", e.getMessage(), e);
+            throw new SystemException(e);
+        }
+
+        return responseFormat;
+    }
 
 
 }

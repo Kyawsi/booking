@@ -24,6 +24,10 @@ public class WaitingList {
     @JoinColumn(name = "schedule_id", nullable = false)
     private ClassSchedule schedule;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_package_id", nullable = false)
+    private UserPackage userPackage;
+
     @Column(name = "created_on")
     private ZonedDateTime createdOn;
 
