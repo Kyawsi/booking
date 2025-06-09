@@ -16,7 +16,9 @@ import java.security.Principal;
 @RequiredArgsConstructor
 @Slf4j
 public class ClassScheduleController {
+
     private final ClassScheduleService classScheduleService;
+
     @GetMapping(value = "/list")
     public ResponseEntity<ResponseFormat> getClassSchedule(
             Principal principal,

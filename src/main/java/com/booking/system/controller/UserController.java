@@ -1,6 +1,6 @@
 package com.booking.system.controller;
 
-import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.model.User;
 import com.booking.system.entity.request.ChangePasswordRequest;
 import com.booking.system.entity.request.LoginRequest;
 import com.booking.system.entity.request.PersonCreateUpdateRequest;
@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -72,7 +71,7 @@ public class UserController {
     public ResponseEntity<ResponseFormat> verifyMock(@RequestParam Long userId) {
         ResponseFormat responseFormat = new ResponseFormat();
         try {
-            OAuthUser user = userRepository.findById(userId)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
 
             if (user.getIsVerified()) {
@@ -113,18 +112,16 @@ public class UserController {
         ResponseFormat responseFormat = new ResponseFormat();
 
         try {
-            OAuthUser user = userRepository.findByEmail(email)
+            User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
 
             String otp = generateOtp();
 
-            // Send the OTP to user's email (mocked here)
             boolean emailSent = sendOtpEmail(user.getEmail(), otp);
             if (!emailSent) {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send OTP email");
             }
 
-            // Save the OTP and timestamp for verification
             user.setPassword(otp);
             user.setUpdatedOn(ZonedDateTime.now());
             userRepository.save(user);

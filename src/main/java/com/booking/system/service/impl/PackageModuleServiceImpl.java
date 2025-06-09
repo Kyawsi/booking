@@ -2,7 +2,7 @@ package com.booking.system.service.impl;
 
 import com.booking.system.dto.PackageResponse;
 import com.booking.system.entity.model.Country;
-import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.model.User;
 import com.booking.system.entity.model.PackageModule;
 import com.booking.system.entity.request.PackageRequest;
 import com.booking.system.entity.response.ListResponse;
@@ -44,7 +44,7 @@ public class PackageModuleServiceImpl implements PackageModuleService {
                 .build();
         try {
             Pageable pageable= PageRequest.of(first,max);
-            OAuthUser user = userRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new SystemException("User not found"));
 
             Country country = countryRepository.findById(user.getCountry().getId())

@@ -2,7 +2,7 @@ package com.booking.system.service.impl;
 
 import com.booking.system.dto.UserPackageHistoryProjection;
 import com.booking.system.dto.UserPackageHistoryResponse;
-import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.model.User;
 import com.booking.system.entity.model.PackageModule;
 import com.booking.system.entity.model.UserPackage;
 import com.booking.system.entity.request.UserPackageRequest;
@@ -13,7 +13,6 @@ import com.booking.system.repository.PackageModuleRepository;
 import com.booking.system.repository.UserPackageRepository;
 import com.booking.system.repository.UserRepository;
 import com.booking.system.service.UserPackageService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +50,7 @@ public class UserPackageServiceImpl implements UserPackageService {
 
         try {
 
-            OAuthUser user = userRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new SystemException("User not found"));
 
             PackageModule packageModule = packageModuleRepository.findById(request.getPackageId())
@@ -71,6 +70,7 @@ public class UserPackageServiceImpl implements UserPackageService {
             } else {
                 userPackage = UserPackage.builder()
                         .user(user)
+
                         .packageModule(packageModule)
                         .remainingCredits(packageModule.getCreditAmount())
                         .createdOn(ZonedDateTime.now())
@@ -104,7 +104,7 @@ public class UserPackageServiceImpl implements UserPackageService {
         try {
             Pageable pageable = PageRequest.of(first, max);
 
-            OAuthUser user = userRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new SystemException("User not found"));
 
             long total= userPackageRepository.countPurchasedPackageHistory(user.getId());

@@ -3,7 +3,7 @@ package com.booking.system.service.impl;
 import com.booking.system.dto.ClassScheduleResponse;
 import com.booking.system.entity.model.ClassSchedule;
 import com.booking.system.entity.model.Country;
-import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.model.User;
 import com.booking.system.entity.request.ClassScheduleRequest;
 import com.booking.system.entity.response.ListResponse;
 import com.booking.system.entity.response.ResponseFormat;
@@ -43,7 +43,7 @@ public class ClassScheduleServiceImpl implements ClassScheduleService{
                 .totalRecords(0)
                 .build();
         try {
-            OAuthUser user = userRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,"User not found"));
 
             Country country = countryRepository.findById(user.getCountry().getId())

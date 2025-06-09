@@ -1,6 +1,6 @@
 package com.booking.system.filter;
 
-import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,9 +9,9 @@ import java.util.Collections;
 
 public class CustomUserDetails implements UserDetails {
 
-    private final OAuthUser user;
+    private final User user;
 
-    public CustomUserDetails(OAuthUser user) {
+    public CustomUserDetails(User user) {
         this.user = user;
     }
 
@@ -51,7 +51,7 @@ public class CustomUserDetails implements UserDetails {
         return user.getIsVerified() != null && user.getIsVerified(); // only verified users
     }
 
-    public OAuthUser getUser() {
+    public User getUser() {
         return user;
     }
 }

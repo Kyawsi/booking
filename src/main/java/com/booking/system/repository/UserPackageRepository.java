@@ -1,7 +1,7 @@
 package com.booking.system.repository;
 
 import com.booking.system.dto.UserPackageHistoryProjection;
-import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.model.User;
 import com.booking.system.entity.model.PackageModule;
 import com.booking.system.entity.model.UserPackage;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +16,7 @@ import java.util.Optional;
 @Repository
 public interface UserPackageRepository extends CrudRepository<UserPackage,Long> {
 
-    Optional<UserPackage> findByUserAndPackageModule(OAuthUser user, PackageModule packageModule);
+    Optional<UserPackage> findByUserAndPackageModule(User user, PackageModule packageModule);
 
     @Query(value = "SELECT " +
             "up.id as ownPackageId, " +

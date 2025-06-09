@@ -17,6 +17,7 @@ import java.util.Optional;
 public interface ClassScheduleRepository extends CrudRepository<ClassSchedule,Long> {
 
     @Query("SELECT new com.booking.system.dto.ClassScheduleResponse(" +
+            " cs.id as id, " +
             " cs.title as title, " +
             " cs.requiredCredits as requiredCredits ," +
             " cs.startTime as startTime, " +

@@ -1,9 +1,7 @@
 package com.booking.system.repository;
 
-import com.booking.system.dto.LoginProfileResponse;
 import com.booking.system.dto.PackageResponse;
 import com.booking.system.entity.model.Country;
-import com.booking.system.entity.model.OAuthUser;
 import com.booking.system.entity.model.PackageModule;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -12,7 +10,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface PackageModuleRepository extends CrudRepository<PackageModule,Long> {

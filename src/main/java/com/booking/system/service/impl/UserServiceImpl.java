@@ -2,7 +2,7 @@ package com.booking.system.service.impl;
 
 import com.booking.system.dto.LoginProfileResponse;
 import com.booking.system.entity.model.Country;
-import com.booking.system.entity.model.OAuthUser;
+import com.booking.system.entity.model.User;
 import com.booking.system.entity.request.ChangePasswordRequest;
 import com.booking.system.entity.request.PersonCreateUpdateRequest;
 import com.booking.system.entity.response.ResponseFormat;
@@ -48,7 +48,7 @@ public class UserServiceImpl implements UserService {
 
             boolean isVerified = !(Boolean.TRUE.equals(request.isSelfRegister()));
 
-            OAuthUser user = OAuthUser.builder()
+            User user = User.builder()
                     .email(request.getEmail())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .name(request.getUsername().replace("/", "-"))
@@ -90,7 +90,7 @@ public class UserServiceImpl implements UserService {
     public ResponseFormat brief(String username) {
         ResponseFormat responseFormat = null;
         try {
-            OAuthUser user = userRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new SystemException("User not found"));
 
             LoginProfileResponse loginResponse = userRepository.findProfileByGuid(user)
@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
         ResponseFormat responseFormat = new ResponseFormat();
 
         try {
-            OAuthUser user = userRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
 
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));

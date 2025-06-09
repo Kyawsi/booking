@@ -4,10 +4,8 @@ import com.booking.system.entity.model.*;
 import com.booking.system.entity.request.BookingCancelRequest;
 import com.booking.system.entity.request.BookingRequest;
 import com.booking.system.entity.response.ResponseFormat;
-import com.booking.system.exception.SystemException;
 import com.booking.system.repository.*;
 import com.booking.system.service.BookingService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.redisson.api.RLock;
@@ -18,8 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -54,10 +54,9 @@ public class BookingServiceImpl implements BookingService {
         ResponseFormat responseFormat = null;
 
         try {
-            OAuthUser user = userRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
 
-            // Fetch the UserPackage based on the userPackageId
             UserPackage userPackage = userPackageRepository.findById(request.getUserPackageId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User Package not found"));
 
@@ -68,11 +67,11 @@ public class BookingServiceImpl implements BookingService {
             ClassSchedule classSchedule = classScheduleRepository.findById(request.getScheduleId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Class not found"));
 
-            // Required and remaining credits validation
+            checkForOverlappingBookings(user, classSchedule);
+
             Integer requiredCredits = classSchedule.getRequiredCredits();
             Integer remainingCredits = userPackage.getRemainingCredits();
 
-            // Locking logic using Redis to avoid overbooking
             String lockKey = "booking_lock_" + classSchedule.getId();
             RLock lock = redissonClient.getLock(lockKey);
 
@@ -82,32 +81,26 @@ public class BookingServiceImpl implements BookingService {
             }
 
             try {
-                // Check if the user has already booked this class with the selected package
                 boolean alreadyBooked = bookingRepository.existsByUserAndScheduleAndUserPackage(user, classSchedule, userPackage);
                 if (alreadyBooked) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You have already booked this class with the selected package.");
                 }
 
-                // Check if the user is already on the waitlist
                 boolean alreadyOnWaitlist = waitingListRepository.existsByUserAndScheduleAndUserPackage(user, classSchedule, userPackage);
                 if (alreadyOnWaitlist) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You are already on the waitlist for this class.");
                 }
 
-                // **Check if the class is full**
                 int bookedCount = bookingRepository.countByScheduleAndStatus(classSchedule, "booked");
                 if (bookedCount >= classSchedule.getSlotCount()) {
-                    // If class is full, add to waitlist
                     if (remainingCredits == null || remainingCredits < requiredCredits) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough credits to be added to the waitlist");
                     }
 
-                    // Deduct credits even for waitlist (user holds spot in case of cancellation)
                     userPackage.setRemainingCredits(remainingCredits - requiredCredits);
                     userPackage.setUpdatedOn(ZonedDateTime.now());
                     userPackageRepository.save(userPackage);
 
-                    // Add to waitlist
                     WaitingList waitlist = WaitingList.builder()
                             .user(user)
                             .userPackage(userPackage)
@@ -117,14 +110,11 @@ public class BookingServiceImpl implements BookingService {
                             .build();
                     waitingListRepository.save(waitlist);
 
-                    // Success response: Added to waitlist
                     responseFormat = new ResponseFormat();
                     responseFormat.setSuccess(true);
                     responseFormat.setMessage(Optional.of("Class full. You have been added to the waitlist."));
-                    return responseFormat;  // Exit early, do not proceed with further booking logic
+                    return responseFormat;
                 }
-
-                // **Proceed with booking if the class is not full**
 
                 if (requiredCredits == null || requiredCredits <= 0) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid required credit configuration for class");
@@ -134,12 +124,10 @@ public class BookingServiceImpl implements BookingService {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough credits to book this class");
                 }
 
-                // Deduct credits from user's package
                 userPackage.setRemainingCredits(remainingCredits - requiredCredits);
                 userPackage.setUpdatedOn(ZonedDateTime.now());
                 userPackageRepository.save(userPackage);
 
-                // Create the booking record
                 String status = "booked";
                 Booking booking = Booking.builder()
                         .user(user)
@@ -170,6 +158,32 @@ public class BookingServiceImpl implements BookingService {
         return responseFormat;
     }
 
+    private void checkForOverlappingBookings(User user, ClassSchedule newSchedule) {
+        List<Booking> userBookings = bookingRepository.findByUserAndStatus(user, "booked");
+
+        List<WaitingList> userWaitlists = waitingListRepository.findByUser(user);
+
+        List<ClassSchedule> scheduledClasses = new ArrayList<>();
+        userBookings.forEach(booking -> scheduledClasses.add(booking.getSchedule()));
+        userWaitlists.forEach(waitlist -> scheduledClasses.add(waitlist.getSchedule()));
+
+        for (ClassSchedule existingSchedule : scheduledClasses) {
+            if (isOverlapping(existingSchedule, newSchedule)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "This class overlaps with your existing booking: " + existingSchedule.getTitle());
+            }
+        }
+    }
+
+    private boolean isOverlapping(ClassSchedule schedule1, ClassSchedule schedule2) {
+        ZonedDateTime start1 = schedule1.getStartTime();
+        ZonedDateTime end1 = schedule1.getEndTime();
+        ZonedDateTime start2 = schedule2.getStartTime();
+        ZonedDateTime end2 = schedule2.getEndTime();
+
+        return start1.isBefore(end2) && start2.isBefore(end1);
+    }
+
 
     @Override
     public ResponseFormat cancelBooking(BookingCancelRequest request, String username) {
@@ -182,22 +196,30 @@ public class BookingServiceImpl implements BookingService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unauthorized user to cancel this booking");
             }
 
-            ZonedDateTime classStart = booking.getSchedule().getStartTime();
-            ZonedDateTime now = ZonedDateTime.now();
-            long hoursDiff = ChronoUnit.HOURS.between(now, classStart);
-
-            if (hoursDiff < 4) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot cancel the class within 4 hours of its start time");
+            if ("cancelled".equals(booking.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking is already cancelled");
             }
 
-            UserPackage pkg = booking.getUserPackage();
-            pkg.setRemainingCredits(pkg.getRemainingCredits() + booking.getSchedule().getRequiredCredits());
-            pkg.setUpdatedOn(now);
-            userPackageRepository.save(pkg);
+            ZonedDateTime now = ZonedDateTime.now();
+            ZonedDateTime classStart = booking.getSchedule().getStartTime();
+
+            if (now.isAfter(classStart)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Class already started. Cannot cancel.");
+            }
 
             booking.setStatus("cancelled");
             booking.setUpdatedOn(now);
             bookingRepository.save(booking);
+
+            Duration timeUntilClass = Duration.between(now, classStart);
+
+            if (timeUntilClass.toHours() >= 4) {
+                UserPackage pkg = booking.getUserPackage();
+                pkg.setRemainingCredits(pkg.getRemainingCredits() + booking.getSchedule().getRequiredCredits());
+                pkg.setUpdatedOn(now);
+                userPackageRepository.save(pkg);
+            }
+
 
             promoteFromWaitlist(booking.getSchedule());
 

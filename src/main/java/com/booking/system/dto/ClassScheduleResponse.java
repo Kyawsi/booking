@@ -14,6 +14,7 @@ import java.time.ZonedDateTime;
 @AllArgsConstructor
 public class ClassScheduleResponse {
 
+    private Long id;
     private String title;
     private int requiredCredits;
 
